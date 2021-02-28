@@ -4,6 +4,7 @@ import numpy as np
 from moviepy.editor import *
 import time
 import math
+import argparse
 
 """
 Generate .npy files for input to the rgb_imagenet model. 
@@ -14,16 +15,19 @@ Generate .npy files for input to the rgb_imagenet model.
 5. Write video as .npy file with shape (1, num_frames, 224, 224, 3).
 """
 
-DATASET = os.path.join("/Users/isabellayu/sr-dataset/videos")
-SUBCLIPS = os.path.join(DATASET, "subclips")
-os.chdir(DATASET)
-videos = [i for i in os.listdir(DATASET) if i.endswith(".mp4")]
+parser = argparse.ArgumentParser()
+parser.add_argument('data_path', help='path to subclips')
+args = parser.parse_args()
+
+DATASET = args.data_path
 
 IMG_SIZE = 224
 FRAME_RATE = 25
 
 
 def make_subclips():
+    os.chdir(DATASET)
+    videos = [i for i in os.listdir(DATASET) if i.endswith(".mp4")]
     for v in videos:
         clip_num = 0
         clip_start = 0
@@ -42,8 +46,8 @@ def make_subclips():
 
 
 def make_npy():
-    os.chdir(SUBCLIPS)
-    for s in os.listdir(SUBCLIPS):
+    os.chdir(DATASET)
+    for s in os.listdir(DATASET):
         print(s)
         cap = cv.VideoCapture(s)
         vid = VideoFileClip(s)
@@ -73,6 +77,6 @@ def make_npy():
             frame_no += 1
         np.save(s[:-4], final_input)
 
+
 if __name__ == "__main__":
-    # make_subclips()
     make_npy()
