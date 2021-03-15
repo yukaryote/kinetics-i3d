@@ -1,0 +1,15 @@
+{
+    "learning_rate": 1e-3,
+    "batch_size": 16,
+    "num_epochs": 50,
+    "num_labels": 3,
+    "num_parallel_calls": 4,
+    "save_summary_steps": 1,
+    "train_size": 913,
+    "train_ids": ["01", "02", "03", "04", "05", "06"],
+    "eval_id": "07",
+    "test_id": "11",
+    "img_size": 224,
+    "frame_rate": 25,
+    "data_path": "/Users/isabellayu/sr-dataset/videos/subclips"
+}

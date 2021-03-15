@@ -1,12 +1,8 @@
 import cv2 as cv
-import os
 import numpy as np
 from moviepy.editor import *
-import time
 import math
-import argparse
 import tensorflow as tf
-from math import ceil
 
 """
 Generate .npy files for input to the rgb_imagenet model. 
@@ -17,22 +13,12 @@ Generate .npy files for input to the rgb_imagenet model.
 5. Write video as .npy file with shape (1, num_frames, 224, 224, 3).
 """
 
-parser = argparse.ArgumentParser()
-parser.add_argument('data_path', help='path to subclips')
-args = parser.parse_args()
-
-DATASET = args.data_path
-LABELS = {"l": "low risk", "m": "medium risk", "h": "high risk"}
-NPY_PATH = os.path.join(args.data_path, "npy")
-SUBCLIPS_PATH = os.path.join(args.data_path, "subclips")
-
-IMG_SIZE = 224
-FRAME_RATE = 25
+LABELS = {"l": 0, "m": 1, "h": 2}
 
 
-def make_subclips():
-    os.chdir(SUBCLIPS_PATH)
-    videos = [i for i in os.listdir(SUBCLIPS_PATH) if i.endswith(".mp4")]
+def make_subclips(params):
+    os.chdir(params.data_path)
+    videos = [i for i in os.listdir(params.data_path) if i.endswith(".mp4")]
     for v in videos:
         clip_num = 0
         clip_start = 0
@@ -50,9 +36,11 @@ def make_subclips():
             clip_num += 1
 
 
-def make_npy():
-    os.chdir(SUBCLIPS_PATH)
-    for s in os.listdir(SUBCLIPS_PATH):
+def make_npy(params):
+    IMG_SIZE = params.img_size
+    FRAME_RATE = params.frame_rate
+    os.chdir(params.data_path)
+    for s in os.listdir(params.data_path):
         if not os.path.isfile(s[:-4] + ".npy"):
             print(s)
             cap = cv.VideoCapture(s)
@@ -83,20 +71,61 @@ def make_npy():
             np.save(s[:-4], final_input)
 
 
-def train_test_split(batch_size):
-    npy_files = [i for i in os.listdir(DATASET) if i.endswith(".npy")]
-    # Load the training data into two NumPy arrays, for example using `np.load()`.
-    all_data = np.ndarray(shape=(len(npy_files),))
-    all_labels = np.ndarray(shape=(len(npy_files),))
-    for n in npy_files:
-        label = LABELS[n[3]]
-        data = np.load(n)
-        np.append(all_data, data)
-        np.append(all_labels, label)
+def train_test_split(params, data_dir):
+    """
+    1-7, 11 include subject face.
+    Use 1-6 for training
+    Use 7 for validation
+    Use 11 for testing
+    Can see if model works on blurred faces as well?
+    """
+    npy_files = [i for i in os.listdir(data_dir) if i.endswith(".npy")]
+    train_files = [i for i in npy_files if i[:2] in params.train_ids]
+    validation_files = [i for i in npy_files if i[:2] == params.eval_id]
+    test_files = [i for i in npy_files if i[:2] == params.test_id]
+    print(train_files)
 
-    dataset = tf.data.Dataset.from_tensor_slices((all_data, all_labels))
-    dataset = dataset.shuffle(len(npy_files))
-    dataset = dataset.batch(batch_size)
-    dataset = dataset.prefetch(1)
-    num_batches = ceil(len(npy_files)/batch_size)
-    return dataset, num_batches
+    params.train_size = len(train_files)
+    params.eval_size = len(validation_files)
+
+    # Load the training data into two NumPy arrays, for example using `np.load()`.
+    train_data = []
+    validation_data = []
+    test_data = []
+
+    train_labels = []
+    validation_labels = []
+    test_labels = []
+
+    def make_labels(input_files, dest_data, dest_labels):
+        os.chdir(data_dir)
+        for n in input_files:
+            label = LABELS[n[3]]
+            data = np.load(n)
+            data = np.squeeze(data, axis=0)
+            data = data.astype("float32")
+            dest_data.append(data)
+            dest_labels.append(label)
+        dest_data = np.array(dest_data)
+        dest_labels = np.array(dest_labels)
+        print(dest_labels)
+
+        dataset = (tf.data.Dataset.from_tensor_slices((dest_data, dest_labels)).batch(params.batch_size).prefetch(1))
+        return dataset
+
+    def make_input(input_dataset):
+        iterator = input_dataset.make_initializable_iterator()
+        images, labels = iterator.get_next()
+        iterator_init_op = iterator.initializer
+
+        inputs = {'images': images, 'labels': labels, 'iterator_init_op': iterator_init_op}
+        return inputs
+
+    train_dataset = make_labels(train_files, train_data, train_labels)
+    validation_dataset = make_labels(validation_files, validation_data, validation_labels)
+    test_dataset = make_labels(test_files, test_data, test_labels)
+
+    train_inputs = make_input(train_dataset)
+    validation_inputs = make_input(validation_dataset)
+    test_inputs = make_input(test_dataset)
+    return train_inputs, validation_inputs, test_inputs

@@ -21,7 +21,7 @@ from __future__ import print_function
 import numpy as np
 import tensorflow as tf
 
-import i3d
+from original_i3d import i3d
 
 _IMAGE_SIZE = 224
 
@@ -120,9 +120,9 @@ def main(unused_argv):
                 rgb_saver.restore(sess, _CHECKPOINT_PATHS['rgb_imagenet'])
             else:
                 rgb_saver.restore(sess, _CHECKPOINT_PATHS[eval_type])
+            print(model_logits)
             tf.logging.info('RGB checkpoint restored')
             rgb_sample = np.load(_SAMPLE_PATHS['rgb'])
-            print(rgb_sample)
             tf.logging.info('RGB data loaded, shape=%s', str(rgb_sample.shape))
             feed_dict[rgb_input] = rgb_sample
 

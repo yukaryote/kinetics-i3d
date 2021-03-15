@@ -21,7 +21,7 @@ from __future__ import print_function
 import numpy as np
 import tensorflow as tf
 
-import i3d
+from original_i3d import i3d
 
 _IMAGE_SIZE = 224
 _NUM_CLASSES = 400
