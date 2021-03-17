@@ -16,10 +16,11 @@ from model.transfer_rgb import model_fn
 parser = argparse.ArgumentParser()
 parser.add_argument('--model_dir', default='model',
                     help="Experiment directory containing params.json")
-parser.add_argument('--data_dir', default='/Users/isabellayu/sr-dataset/videos/subclips',
+parser.add_argument('--data_dir', default='/storage1/sr-kinetics-data/subclips',
                     help="Directory containing the dataset")
 parser.add_argument('--restore_from', default=None,
                     help="Optional, directory or file containing weights to reload before training")
+tf.debugging.set_log_device_placement(True)
 
 if __name__ == '__main__':
     with tf.device("/GPU:0"):

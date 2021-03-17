@@ -7,7 +7,7 @@
     "save_summary_steps": 1,
     "train_size": 913,
     "train_ids": ["01", "02", "03", "04", "05", "06", "07"],
-    "eval_id": "11",
+    "val_id": "11",
     "test_id": "13",
     "img_size": 224,
     "frame_rate": 25,
