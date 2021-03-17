@@ -85,6 +85,7 @@ def train_test_split(is_training, params, data_dir):
     img_npy = make_npy(is_training, params)
     all_data = []
     all_labels = []
+    print("yo")
 
     def make_labels(input_arr, dest_data, dest_labels):
         os.chdir(data_dir)
