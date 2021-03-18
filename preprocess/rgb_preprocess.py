@@ -15,7 +15,6 @@ Generate .npy files for input to the rgb_imagenet model.
 
 LABELS = {"l": 0, "m": 1, "h": 2}
 
-
 def make_subclips(params):
     videos = [i for i in os.listdir(params.videos_path) if i.endswith(".mp4")]
     os.chdir(params.videos_path)
@@ -85,27 +84,25 @@ def train_test_split(is_training, params, data_dir):
     img_npy = make_npy(is_training, params)
     all_data = []
     all_labels = []
-    print("yo")
 
     def make_labels(input_arr, dest_data, dest_labels):
         os.chdir(data_dir)
-        def input_gen(input_a):
-            for n in input_a:
+        def input_gen():
+            for n in input_arr:
                 label = n[1]
                 data = n[0]
                 yield label, data
         if is_training:
             params.train_size = len(dest_data)
-            dataset = tf.data.Dataset.from_generator(input_gen, args=[input_arr], output_types=(tf.int64, tf.float32)).shuffle(params.batch_size*params.train_size).batch(params.batch_size).prefetch(1)
-            for batch in dataset:
-                print(batch.numpy())
+            dataset = tf.data.Dataset.from_generator(input_gen, output_types=(tf.int64, tf.float32)).shuffle(100).batch(params.batch_size).prefetch(1)
         else:
-            dataset = tf.data.Dataset.from_generator(input_gen, args=[input_arr], output_types=(tf.int64, tf.float32)).batch(1).prefetch(1)
+            dataset = tf.data.Dataset.from_generator(input_gen, output_types=(tf.int64, tf.float32)).batch(1).prefetch(1)
         return dataset
 
     def make_input(input_dataset):
         iterator = input_dataset.make_initializable_iterator()
-        labels, images = iterator.get_next()
+        labels = iterator.get_next()[0]
+        images = iterator.get_next()[1]
         print(images, labels)
         iterator_init_op = iterator.initializer
 

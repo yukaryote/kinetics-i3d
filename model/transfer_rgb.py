@@ -15,11 +15,11 @@ _IMAGE_SIZE = 224
 FRAME_NUM = 125
 
 _CHECKPOINT_PATHS = {
-    'rgb': '/Users/isabellayu/kinetics-i3d/data/checkpoints/rgb_scratch/model.ckpt',
-    'rgb600': '/Users/isabellayu/kinetics-i3d/data/checkpoints/rgb_scratch_kin600/model.ckpt',
-    'flow': '/Users/isabellayu/kinetics-i3d/data/checkpoints/flow_scratch/model.ckpt',
-    'rgb_imagenet': '/Users/isabellayu/kinetics-i3d/data/checkpoints/rgb_imagenet/model.ckpt',
-    'flow_imagenet': '/Users/isabellayu/kinetics-i3d/data/checkpoints/flow_imagenet/model.ckpt',
+    'rgb': '/home/isabellayu/kinetics-i3d/data/checkpoints/rgb_scratch/model.ckpt',
+    'rgb600': '/home/isabellayu/kinetics-i3d/data/checkpoints/rgb_scratch_kin600/model.ckpt',
+    'flow': '/home/isabellayu/kinetics-i3d/data/checkpoints/flow_scratch/model.ckpt',
+    'rgb_imagenet': '/home/isabellayu/kinetics-i3d/data/checkpoints/rgb_imagenet/model.ckpt',
+    'flow_imagenet': '/home/isabellayu/kinetics-i3d/data/checkpoints/flow_imagenet/model.ckpt',
 }
 
 _LABEL_MAP_PATH = '../data/label_map_sr.txt'
@@ -27,10 +27,41 @@ IMAGENET_NUM_CLASSES = 400
 SR_NUM_CLASSES = 3
 
 
-def make_model(is_training, input):
-    images = input["images"]
-    rgb_input = images
-    with tf.variable_scope('RGB'):
+def make_model(net, is_training):
+    # add fine-tuning layers
+    net = tf.nn.avg_pool3d(net, ksize=[1, 1, 1, 1, 1],
+                           strides=[1, 1, 1, 1, 1], padding=snt.VALID)
+    net = tf.nn.dropout(net, 0.5, name="dropout")
+    logits = i3d.Unit3D(output_channels=3,
+                        kernel_shape=[1, 1, 1],
+                        activation_fn=None,
+                        use_batch_norm=False,
+                        use_bias=True,
+                        name='Conv3d_0c_1x1')(net, is_training=is_training)
+    logits = tf.squeeze(logits, [2, 3], name='SpatialSqueeze')
+    averaged_logits = tf.reduce_mean(logits, axis=1)
+    print(averaged_logits)
+    return averaged_logits
+
+
+def model_fn(mode, inputs, params, reuse=False):
+    """Model function defining the graph operations.
+        Args:
+            mode: (string) can be 'train' or 'eval'
+            inputs: (dict) contains the inputs of the graph (features, labels...)
+                    this can be `tf.placeholder` or outputs of `tf.data`
+            params: (Params) contains hyperparameters of the model (ex: `params.learning_rate`)
+            reuse: (bool) whether to reuse the weights
+        Returns:
+            model_spec: (dict) contains the graph operations or nodes needed for training / evaluation
+        """
+    is_training = (mode == 'train')
+    labels = inputs['labels']
+    labels = tf.cast(labels, tf.int64)
+
+    images = inputs["images"]
+    rgb_input = tf.placeholder(tf.float32, shape=(None, 25, 224, 224, 3))
+    with tf.variable_scope('RGB', reuse=reuse):
         rgb_model = i3d.InceptionI3d(
             IMAGENET_NUM_CLASSES, spatial_squeeze=True, final_endpoint='Mixed_5c')
         m5c, c = rgb_model(
@@ -50,45 +81,27 @@ def make_model(is_training, input):
         rgb_saver.restore(sess, _CHECKPOINT_PATHS['rgb_imagenet'])
         graph = tf.get_default_graph()
         net = graph.get_tensor_by_name("RGB/inception_i3d/Mixed_5c/Branch_3/Conv3d_0b_1x1/batch_norm/beta:0")
-    with tf.variable_scope("Dense"):
         # add fine-tuning layers
-        net = tf.nn.avg_pool3d(net, ksize=[1, 1, 1, 1, 1],
-                               strides=[1, 1, 1, 1, 1], padding=snt.VALID)
-        net = tf.nn.dropout(net, 0.5, name="dropout")
-        logits = i3d.Unit3D(output_channels=3,
-                            kernel_shape=[1, 1, 1],
-                            activation_fn=None,
-                            use_batch_norm=False,
-                            use_bias=True,
-                            name='Conv3d_0c_1x1')(net, is_training=is_training)
-        logits = tf.squeeze(logits, [2, 3], name='SpatialSqueeze')
-        averaged_logits = tf.reduce_mean(logits, axis=1)
-        print(averaged_logits)
-        for v in tf.trainable_variables():
-            print("trainable: ", v)
-    return averaged_logits
-
-
-def model_fn(mode, inputs, params, reuse=False):
-    """Model function defining the graph operations.
-        Args:
-            mode: (string) can be 'train' or 'eval'
-            inputs: (dict) contains the inputs of the graph (features, labels...)
-                    this can be `tf.placeholder` or outputs of `tf.data`
-            params: (Params) contains hyperparameters of the model (ex: `params.learning_rate`)
-            reuse: (bool) whether to reuse the weights
-        Returns:
-            model_spec: (dict) contains the graph operations or nodes needed for training / evaluation
-        """
-    is_training = (mode == 'train')
-    labels = inputs['labels']
-    labels = tf.cast(labels, tf.int64)
-
+    net = tf.nn.avg_pool3d(net, ksize=[1, 1, 1, 1, 1],
+                           strides=[1, 1, 1, 1, 1], padding=snt.VALID)
+    net = tf.nn.dropout(net, 0.5, name="dropout")
+    logits = i3d.Unit3D(output_channels=3,
+                        kernel_shape=[1, 1, 1],
+                        activation_fn=None,
+                        use_batch_norm=False,
+                        use_bias=True,
+                        name='Conv3d_0c_1x1')(net, is_training=is_training)
+    logits = tf.squeeze(logits, [2, 3], name='SpatialSqueeze')
+    averaged_logits = tf.reduce_mean(logits, axis=1)
+    print(averaged_logits)
     # -----------------------------------------------------------
     # MODEL: define the layers of the model
     # Compute the output distribution of the model and the predictions
-    logits = make_model(is_training, inputs)
-    predictions = tf.argmax(logits)
+    with tf.variable_scope("RGB", reuse=tf.AUTO_REUSE):
+        with tf.variable_scope("Dense", reuse=reuse):
+            logits = make_model(net, is_training)
+            predictions = tf.argmax(logits)
+            to_train = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope="RGB/Dense") 
 
     # Define loss and accuracy
     loss = tf.losses.sparse_softmax_cross_entropy(labels=labels, logits=logits)
@@ -96,7 +109,6 @@ def model_fn(mode, inputs, params, reuse=False):
 
     # Define training step that minimizes the loss with the Adam optimizer
     # Only train fine-tuning layers
-    to_train = [v for v in tf.trainable_variables() if v.name.startswith("Dense")]
     if is_training:
         optimizer = tf.train.AdamOptimizer(params.learning_rate)
         global_step = tf.train.get_or_create_global_step()
@@ -107,7 +119,7 @@ def model_fn(mode, inputs, params, reuse=False):
     # Metrics for evaluation using tf.metrics (average over whole dataset)
     with tf.variable_scope("metrics"):
         metrics = {
-            'accuracy': tf.metrics.accuracy(labels=labels, predictions=tf.argmax(logits, 1)),
+            'accuracy': tf.metrics.accuracy(labels=labels, predictions=tf.argmax(logits)),
             'loss': tf.metrics.mean(loss)
         }
 
@@ -125,13 +137,7 @@ def model_fn(mode, inputs, params, reuse=False):
 
     # TODO: if mode == 'eval': ?
     # Add incorrectly labeled images
-    mask = tf.not_equal(labels, predictions)
-
-    # Add a different summary to know how they were misclassified
-    for label in range(0, SR_NUM_CLASSES):
-        mask_label = tf.logical_and(mask, tf.equal(predictions, label))
-        incorrect_image_label = tf.boolean_mask(inputs['images'], mask_label)
-        tf.summary.image('incorrectly_labeled_{}'.format(label), incorrect_image_label)
+    print(labels.shape, predictions.shape)
 
     # -----------------------------------------------------------
     # MODEL SPECIFICATION
