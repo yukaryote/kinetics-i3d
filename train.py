@@ -51,14 +51,14 @@ if __name__ == '__main__':
     # Create the two iterators over the two datasets
     train_inputs = train_test_split(True, params, args.data_dir)
     val_inputs = train_test_split(False, params, args.data_dir)
+
     # Define the model
     logging.info("Creating the model...")
-    train_model_spec = model_fn('train', train_inputs, params)
-    eval_model_spec = model_fn('eval', val_inputs, params, reuse=True)
+    model_spec = model_fn('train', train_inputs, params)
 
     # Train the model
     logging.info("Starting training for {} epoch(s)".format(params.num_epochs))
 
     with tf.device("/device:XLA_GPU:0"):
-        train_and_evaluate(train_model_spec, eval_model_spec,
+        train_and_evaluate(model_spec,
                            args.model_dir, params, args.restore_from)

@@ -8,7 +8,7 @@ import tensorflow as tf
 from model.utils import save_dict_to_json
 
 
-def evaluate_sess(sess, model_spec, num_steps, writer=None, params=None):
+def evaluate_sess(sess, model_spec, val_data, num_steps, writer=None, params=None):
     """Train the model on `num_steps` batches.
     Args:
         sess: (tf.Session) current session
@@ -22,7 +22,7 @@ def evaluate_sess(sess, model_spec, num_steps, writer=None, params=None):
     global_step = tf.train.get_global_step()
 
     # Load the evaluation dataset into the pipeline and initialize the metrics init op
-    sess.run(model_spec['iterator_init_op'])
+    sess.run(val_data['iterator_init_op'])
     sess.run(model_spec['metrics_init_op'])
 
     # compute metrics over the dataset
@@ -45,7 +45,7 @@ def evaluate_sess(sess, model_spec, num_steps, writer=None, params=None):
     return metrics_val
 
 
-def evaluate(model_spec, model_dir, params, restore_from):
+def evaluate(model_spec, model_dir, val_data, params, restore_from):
     """Evaluate the model
     Args:
         model_spec: (dict) contains the graph operations or nodes needed for evaluation
@@ -69,7 +69,7 @@ def evaluate(model_spec, model_dir, params, restore_from):
 
         # Evaluate
         num_steps = (params.eval_size + params.batch_size - 1) // params.batch_size
-        metrics = evaluate_sess(sess, model_spec, num_steps)
+        metrics = evaluate_sess(sess, model_spec, val_data, num_steps)
         metrics_name = '_'.join(restore_from.split('/'))
         save_path = os.path.join(model_dir, "metrics_test_{}.json".format(metrics_name))
         save_dict_to_json(metrics, save_path)

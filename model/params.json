@@ -5,7 +5,6 @@
     "num_labels": 3,
     "num_parallel_calls": 4,
     "save_summary_steps": 1,
-    "train_size": 913,
     "train_ids": ["01", "02", "03", "04", "05", "06", "07"],
     "val_id": "11",
     "test_id": "13",

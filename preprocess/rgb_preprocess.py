@@ -98,6 +98,7 @@ def train_test_split(is_training, params, data_dir):
         else:
             dataset = tf.data.Dataset.from_generator(input_gen, output_types=(tf.int64, tf.float32)).batch(1).prefetch(1)
         return dataset
+    dataset = make_labels(img_npy, all_data, all_labels)
 
     def make_input(input_dataset):
         iterator = input_dataset.make_initializable_iterator()

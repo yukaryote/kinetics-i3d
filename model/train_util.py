@@ -5,7 +5,7 @@ import os
 from model.utils import save_dict_to_json
 
 
-def train_sess(sess, model_spec, num_steps, writer, params):
+def train_sess(sess, model_spec, num_steps, writer, params, train_data):
     loss = model_spec['loss']
     train_op = model_spec['train_op']
     update_metrics = model_spec['update_metrics']
@@ -38,7 +38,7 @@ def train_sess(sess, model_spec, num_steps, writer, params):
     tf.logging.info("- Train metrics: " + metrics_string)
 
 
-def train_and_evaluate(train_model_spec, eval_model_spec, model_dir, params, restore_from=None):
+def train_and_evaluate(train_model_spec, model_dir, params, train_data, val_data, restore_from=None):
     """Train the model and evaluate every epoch.
     Args:
         train_model_spec: (dict) contains the graph operations or nodes needed for training
@@ -83,7 +83,7 @@ def train_and_evaluate(train_model_spec, eval_model_spec, model_dir, params, res
 
             # Evaluate for one epoch on validation set
             num_steps = (params.eval_size + params.batch_size - 1) // params.batch_size
-            metrics = evaluate_sess(sess, eval_model_spec, num_steps, eval_writer)
+            metrics = evaluate_sess(sess, train_model_spec, val_data, num_steps, eval_writer)
 
             # If best_eval, best_save_path
             eval_acc = metrics['accuracy']
