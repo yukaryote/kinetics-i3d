@@ -1,11 +1,11 @@
 import tensorflow as tf
 from tqdm import trange
-from original_i3d.evaluation import evaluate_sess
+from evaluate.py import evaluate_sess
 import os
 from model.utils import save_dict_to_json
 
 
-def train_sess(sess, model_spec, num_steps, writer, params, train_data):
+def train_sess(sess, model_spec, num_steps, writer, params):
     loss = model_spec['loss']
     train_op = model_spec['train_op']
     update_metrics = model_spec['update_metrics']
@@ -53,7 +53,7 @@ def train_and_evaluate(train_model_spec, model_dir, params, train_data, val_data
     best_saver = tf.train.Saver(max_to_keep=1)  # only keep 1 best checkpoint (best on eval)
     begin_at_epoch = 0
 
-    with tf.Session() as sess:
+    with tf.Session(config=tf.ConfigProto(allow_soft_placement=True, log_device_placement=True)) as sess:
         # Initialize model variables
         sess.run(train_model_spec['variable_init_op'])
 

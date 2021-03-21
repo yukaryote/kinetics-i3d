@@ -12,6 +12,7 @@
     "frame_rate": 25,
     "window_size": 30,
     "train_size": 100,
+    "eval_size": 10,
     "data_path": "/storage1/sr-kinetics-data/subclips/",
     "videos_path": "/storage1/sr-kinetics-data/videos/"
 }

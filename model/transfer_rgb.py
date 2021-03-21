@@ -42,8 +42,12 @@ IMAGENET_NUM_CLASSES = 400
 SR_NUM_CLASSES = 3
 
 
-def make_model(is_training):
-    rgb_input = tf.placeholder(tf.float32, shape=(None, 25, 224, 224, 3))
+def make_model(is_training, inputs, params):
+    images = inputs['images']
+    print(images.get_shape());
+    assert images.get_shape().as_list() == [None, 25, params.img_size, params.img_size, 3], "images of shape {}".format(images.get_shape())
+
+    rgb_input = images
     with tf.variable_scope('RGB'):
         rgb_model = i3d.InceptionI3d(
             IMAGENET_NUM_CLASSES, spatial_squeeze=True, final_endpoint='Mixed_5c')
@@ -96,16 +100,13 @@ def model_fn(mode, inputs, params, reuse=False):
     is_training = (mode == 'train')
     labels = inputs['labels']
     labels = tf.cast(labels, tf.int64)
-    iterator_init_op = inputs['iterator_init_op']
 
     # -----------------------------------------------------------
     # MODEL: define the layers of the model
     # Compute the output distribution of the model and the predictions
-    with tf.variable_scope("RGB", reuse=tf.AUTO_REUSE):
-        with tf.variable_scope("Dense", reuse=reuse):
-            logits = make_model(is_training)
-            predictions = tf.argmax(logits)
-            to_train = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope="RGB/Dense") 
+    logits = make_model(is_training, inputs, params)
+    predictions = tf.argmax(logits)
+    to_train = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope="RGB/Dense") 
 
     # Define loss and accuracy
     loss = tf.losses.sparse_softmax_cross_entropy(labels=labels, logits=logits)
@@ -156,7 +157,6 @@ def model_fn(mode, inputs, params, reuse=False):
     model_spec['metrics'] = metrics
     model_spec['update_metrics'] = update_metrics_op
     model_spec['summary_op'] = tf.summary.merge_all()
-    model_spec['iterator_init_op'] = iterator_init_op
 
     if is_training:
         model_spec['train_op'] = train_op

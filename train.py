@@ -59,6 +59,4 @@ if __name__ == '__main__':
     # Train the model
     logging.info("Starting training for {} epoch(s)".format(params.num_epochs))
 
-    with tf.device("/device:XLA_GPU:0"):
-        train_and_evaluate(model_spec,
-                           args.model_dir, params, args.restore_from)
+    train_and_evaluate(model_spec, args.model_dir, params, train_inputs, val_inputs, args.restore_from)

@@ -82,10 +82,8 @@ def train_test_split(is_training, params, data_dir):
     Can see if model works on blurred faces as well?
     """
     img_npy = make_npy(is_training, params)
-    all_data = []
-    all_labels = []
 
-    def make_labels(input_arr, dest_data, dest_labels):
+    def make_labels(input_arr):
         os.chdir(data_dir)
         def input_gen():
             for n in input_arr:
@@ -93,12 +91,16 @@ def train_test_split(is_training, params, data_dir):
                 data = n[0]
                 yield label, data
         if is_training:
-            params.train_size = len(dest_data)
-            dataset = tf.data.Dataset.from_generator(input_gen, output_types=(tf.int64, tf.float32)).shuffle(100).batch(params.batch_size).prefetch(1)
+            params.train_size = len(img_npy)
+            print("training size:", len(img_npy), params.train_size);
+            output_shapes = ([1], [25, 224, 224, 3])
+            dataset = tf.data.Dataset.from_generator(input_gen, output_types=(tf.int64, tf.float32), output_shapes=output_shapes).shuffle(100).batch(params.batch_size).prefetch(1)
         else:
+            params.eval_size = len(img_npy)
+            print("eval size:", len(img_npy), params.eval_size);
+            output_shapes = ([1], [25, 224, 224, 3])
             dataset = tf.data.Dataset.from_generator(input_gen, output_types=(tf.int64, tf.float32)).batch(1).prefetch(1)
         return dataset
-    dataset = make_labels(img_npy, all_data, all_labels)
 
     def make_input(input_dataset):
         iterator = input_dataset.make_initializable_iterator()
@@ -110,6 +112,6 @@ def train_test_split(is_training, params, data_dir):
         inputs = {'images': images, 'labels': labels, 'iterator_init_op': iterator_init_op}
         return inputs
 
-    dataset = make_labels(img_npy, all_data, all_labels)
+    dataset = make_labels(img_npy)
     inputs = make_input(dataset)
     return inputs
