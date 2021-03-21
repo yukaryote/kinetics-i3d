@@ -17,8 +17,6 @@ from original_i3d import i3d
 from preprocess.rgb_preprocess import train_test_split
 from model.utils import Params
 from model.utils import set_logger
-from model.train_util import train_and_evaluate
-from model.transfer_rgb import model_fn
 
 _IMAGE_SIZE = 224
 
