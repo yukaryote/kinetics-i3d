@@ -107,6 +107,8 @@ def model_fn(mode, inputs, params, reuse=False):
     logits = make_model(is_training, inputs, params)
     predictions = tf.argmax(logits)
     to_train = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope="RGB/Dense") 
+    for v in to_train:
+        print("trainable: ", v)
 
     # Define loss and accuracy
     loss = tf.losses.sparse_softmax_cross_entropy(labels=labels, logits=logits)
@@ -142,7 +144,6 @@ def model_fn(mode, inputs, params, reuse=False):
 
     # TODO: if mode == 'eval': ?
     # Add incorrectly labeled images
-    print(labels.shape, predictions.shape)
 
     # -----------------------------------------------------------
     # MODEL SPECIFICATION

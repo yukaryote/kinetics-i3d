@@ -1,6 +1,6 @@
 import tensorflow as tf
 from tqdm import trange
-from evaluate.py import evaluate_sess
+from model.evaluation import evaluate_sess
 import os
 from model.utils import save_dict_to_json
 

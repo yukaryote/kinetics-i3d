@@ -92,12 +92,10 @@ def train_test_split(is_training, params, data_dir):
                 yield label, data
         if is_training:
             params.train_size = len(img_npy)
-            print("training size:", len(img_npy), params.train_size);
             output_shapes = ([1], [25, 224, 224, 3])
             dataset = tf.data.Dataset.from_generator(input_gen, output_types=(tf.int64, tf.float32), output_shapes=output_shapes).shuffle(100).batch(params.batch_size).prefetch(1)
         else:
             params.eval_size = len(img_npy)
-            print("eval size:", len(img_npy), params.eval_size);
             output_shapes = ([1], [25, 224, 224, 3])
             dataset = tf.data.Dataset.from_generator(input_gen, output_types=(tf.int64, tf.float32)).batch(1).prefetch(1)
         return dataset
@@ -106,7 +104,6 @@ def train_test_split(is_training, params, data_dir):
         iterator = input_dataset.make_initializable_iterator()
         labels = iterator.get_next()[0]
         images = iterator.get_next()[1]
-        print(images, labels)
         iterator_init_op = iterator.initializer
 
         inputs = {'images': images, 'labels': labels, 'iterator_init_op': iterator_init_op}
